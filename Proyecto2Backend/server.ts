@@ -3,6 +3,7 @@ import { Server as HttpServer } from "http";
 import multer from "multer";
 import helmet from "helmet";
 import fse from "fs-extra";
+import admZip from "adm-zip";
 
 const port = 8000;
 
@@ -11,12 +12,14 @@ const server = new HttpServer(app);
 
 const forms = multer();
 
+app.use(Express.static('public'));
 app.use(helmet());
 app.use(forms.single("textFile"));
 
-app.get('/', (req: Request, res: Response, next: NextFunction) =>
+app.get('/folders', async (req: Request, res: Response, next: NextFunction) =>
 {
-    res.status(200).send("Hello, i'm working!");
+    const files = await fse.readdir('textFiles');
+    res.status(200).send(files);
 });
 
 app.post('/file', async (req: Request, res: Response, next: NextFunction) =>
@@ -44,6 +47,40 @@ app.post('/file', async (req: Request, res: Response, next: NextFunction) =>
     {
         console.error(err);
         res.sendStatus(500);
+    }
+});
+
+app.get('/:folder', async (req: Request, res: Response, next: NextFunction) =>
+{
+    const { folder } = req.params;
+
+    if (!folder)
+    {
+        return res.sendStatus(400);
+    }
+
+    try
+    {
+        const stat = await fse.stat(`textFiles/${folder}`);
+
+        if (!stat.isDirectory())
+        {
+            return res.sendStatus(400);
+        }
+
+        const zip = new admZip();
+        zip.addLocalFolder(`textFiles/${folder}`);
+        const buf = zip.toBuffer();
+
+        res.writeHead(200, {
+            'Content-Disposition': `attachment; filename="${folder}.zip"`,
+            'Content-Type': 'application/zip',
+        });
+
+        return res.end(buf);
+    } catch (err)
+    {
+        res.sendStatus(400);
     }
 });
 

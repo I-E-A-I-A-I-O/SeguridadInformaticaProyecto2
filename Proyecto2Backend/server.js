@@ -4,22 +4,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const socket_io_1 = require("socket.io");
 const http_1 = require("http");
-const socket_io_client_1 = __importDefault(require("socket.io-client"));
 const multer_1 = __importDefault(require("multer"));
 const helmet_1 = __importDefault(require("helmet"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
+const adm_zip_1 = __importDefault(require("adm-zip"));
 const port = 8000;
 const app = (0, express_1.default)();
 const server = new http_1.Server(app);
-const socketServer = new socket_io_1.Server(server);
 const forms = (0, multer_1.default)();
+app.use(express_1.default.static('public'));
 app.use((0, helmet_1.default)());
 app.use(forms.single("textFile"));
-app.get('/', (req, res, next) => {
-    const client = (0, socket_io_client_1.default)('http://localhost:8000');
-    res.status(200).send("Hello, i'm working!");
+app.get('/folders', async (req, res, next) => {
+    const files = await fs_extra_1.default.readdir('textFiles');
+    res.status(200).send(files);
 });
 app.post('/file', async (req, res, next) => {
     let { folderName } = req.body;
@@ -43,11 +42,28 @@ app.post('/file', async (req, res, next) => {
         res.sendStatus(500);
     }
 });
-socketServer.on('connection', (client) => {
-    console.log('CLIENT CONNECTED');
-    client.on('join', (data) => {
-        console.log(`DATA ${data}`);
-    });
+app.get('/:folder', async (req, res, next) => {
+    const { folder } = req.params;
+    if (!folder) {
+        return res.sendStatus(400);
+    }
+    try {
+        const stat = await fs_extra_1.default.stat(`textFiles/${folder}`);
+        if (!stat.isDirectory()) {
+            return res.sendStatus(400);
+        }
+        const zip = new adm_zip_1.default();
+        zip.addLocalFolder(`textFiles/${folder}`);
+        const buf = zip.toBuffer();
+        res.writeHead(200, {
+            'Content-Disposition': `attachment; filename="${folder}.zip"`,
+            'Content-Type': 'application/zip',
+        });
+        return res.end(buf);
+    }
+    catch (err) {
+        res.sendStatus(400);
+    }
 });
 server.listen(port, () => {
     console.log(`Server running on port ${port}`);

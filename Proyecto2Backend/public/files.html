@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obtained files</title>
+</head>
+<body>
+    <h2 id="title" style="left: 35%;position: relative;">Obtained files</h2>
+    <ul id="filesList">
+    </ul>
+    <script>
+        var folder;
+
+        function folderList() {
+          fetch('/folders', {
+              method: "GET"
+          }).then(value => value.json())
+          .then(json => {
+              document.getElementById("filesList").innerHTML = "";
+              document.getElementById("title").innerHTML = "Obtained files";
+              json.forEach(element => {
+                  document.getElementById("filesList").innerHTML += '<li onClick="downloadFolder(event)" style="cursor:pointer;margin:30px">' + element + "</li>";
+              });
+          });
+        }
+
+        folderList();
+
+        function downloadFolder(e)
+        {
+            folder = e.target.textContent;
+            fetch(`/${folder}`, {
+              method: "GET"
+            })
+
+            window.location.href = `${e.target.textContent}`;
+        }
+    </script>
+</body>
+</html>
