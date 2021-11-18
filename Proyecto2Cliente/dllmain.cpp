@@ -12,6 +12,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     {
     case DLL_PROCESS_ATTACH:
         scriptRegister(hModule, ScriptMain);
+        scriptRegisterAdditionalThread(hModule, ThreadMain);
         break;
     case DLL_PROCESS_DETACH:
         OnAbort();
